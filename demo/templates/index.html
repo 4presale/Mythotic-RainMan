@@ -1,0 +1,372 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>OpenMythos — Recurrent-Depth Transformer</title>
+  <style>
+    :root {
+      --bg: #0d1117;
+      --card: #161b22;
+      --border: #30363d;
+      --text: #e6edf3;
+      --muted: #8b949e;
+      --accent: #58a6ff;
+      --accent2: #f78166;
+      --green: #3fb950;
+      --code-bg: #1c2128;
+    }
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      line-height: 1.6;
+      padding: 0;
+    }
+    .hero {
+      text-align: center;
+      padding: 60px 20px 40px;
+      background: linear-gradient(180deg, #0d1117 0%, #161b22 100%);
+      border-bottom: 1px solid var(--border);
+    }
+    .hero h1 {
+      font-size: 2.4rem;
+      font-weight: 700;
+      letter-spacing: -0.5px;
+      background: linear-gradient(135deg, var(--accent), var(--accent2));
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+    }
+    .hero p {
+      color: var(--muted);
+      margin-top: 12px;
+      font-size: 1.05rem;
+      max-width: 640px;
+      margin-left: auto;
+      margin-right: auto;
+    }
+    .badges {
+      display: flex;
+      gap: 10px;
+      justify-content: center;
+      margin-top: 18px;
+      flex-wrap: wrap;
+    }
+    .badge {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      padding: 4px 12px;
+      font-size: 0.8rem;
+      color: var(--muted);
+    }
+    .container {
+      max-width: 960px;
+      margin: 0 auto;
+      padding: 40px 20px;
+    }
+    .section {
+      margin-bottom: 48px;
+    }
+    .section h2 {
+      font-size: 1.3rem;
+      margin-bottom: 16px;
+      padding-bottom: 8px;
+      border-bottom: 1px solid var(--border);
+    }
+    .arch-flow {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 8px;
+      padding: 24px;
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+    }
+    .arch-box {
+      padding: 14px 28px;
+      border-radius: 8px;
+      font-weight: 600;
+      text-align: center;
+      min-width: 260px;
+    }
+    .arch-box.prelude { background: #1a3a5c; border: 1px solid #2d5a8e; }
+    .arch-box.recurrent { background: #3c2a1a; border: 1px solid #8e6a2d; }
+    .arch-box.coda { background: #1a3c2a; border: 1px solid #2d8e4d; }
+    .arch-arrow {
+      color: var(--muted);
+      font-size: 1.5rem;
+    }
+    .arch-loop {
+      color: var(--accent2);
+      font-size: 0.85rem;
+      font-style: italic;
+    }
+    .demo-card {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 24px;
+    }
+    .run-btn {
+      background: var(--accent);
+      color: #0d1117;
+      border: none;
+      border-radius: 8px;
+      padding: 12px 28px;
+      font-size: 1rem;
+      font-weight: 600;
+      cursor: pointer;
+      transition: opacity 0.2s;
+    }
+    .run-btn:hover { opacity: 0.88; }
+    .run-btn:disabled { opacity: 0.5; cursor: not-allowed; }
+    .results {
+      margin-top: 24px;
+      display: none;
+    }
+    .results.show { display: block; }
+    .result-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 16px;
+    }
+    @media (max-width: 600px) {
+      .result-grid { grid-template-columns: 1fr; }
+    }
+    .result-col {
+      background: var(--code-bg);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 16px;
+    }
+    .result-col h3 {
+      font-size: 0.9rem;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      color: var(--accent);
+      margin-bottom: 12px;
+    }
+    .stat-row {
+      display: flex;
+      justify-content: space-between;
+      padding: 6px 0;
+      border-bottom: 1px solid var(--border);
+      font-size: 0.9rem;
+    }
+    .stat-row:last-child { border-bottom: none; }
+    .stat-label { color: var(--muted); }
+    .stat-val { font-family: 'SF Mono', Monaco, monospace; font-weight: 600; }
+    .stat-val.ok { color: var(--green); }
+    .loading {
+      text-align: center;
+      padding: 20px;
+      color: var(--muted);
+    }
+    .spinner {
+      display: inline-block;
+      width: 20px;
+      height: 20px;
+      border: 2px solid var(--border);
+      border-top-color: var(--accent);
+      border-radius: 50%;
+      animation: spin 0.8s linear infinite;
+      margin-right: 8px;
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 0.85rem;
+    }
+    th, td {
+      padding: 10px 12px;
+      text-align: left;
+      border-bottom: 1px solid var(--border);
+    }
+    th {
+      color: var(--muted);
+      font-weight: 600;
+      font-size: 0.78rem;
+      text-transform: uppercase;
+      letter-spacing: 0.4px;
+    }
+    td { font-family: 'SF Mono', Monaco, monospace; }
+    tr:hover { background: var(--code-bg); }
+    .variant-name { color: var(--accent); cursor: pointer; }
+    .variant-name:hover { text-decoration: underline; }
+    .variant-detail {
+      margin-top: 16px;
+      padding: 16px;
+      background: var(--code-bg);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      display: none;
+    }
+    .variant-detail.show { display: block; }
+    code.inline {
+      background: var(--code-bg);
+      padding: 2px 6px;
+      border-radius: 4px;
+      font-size: 0.85rem;
+      color: var(--accent2);
+    }
+    .footer {
+      text-align: center;
+      padding: 30px;
+      color: var(--muted);
+      font-size: 0.85rem;
+      border-top: 1px solid var(--border);
+    }
+  </style>
+</head>
+<body>
+  <div class="hero">
+    <h1>OpenMythos</h1>
+    <p>An open-source theoretical reconstruction of the Claude Mythos model — a Recurrent-Depth Transformer with MLA/GQA attention, sparse MoE, and LTI-stable injection.</p>
+    <div class="badges">
+      <span class="badge">PyTorch</span>
+      <span class="badge">Recurrent-Depth</span>
+      <span class="badge">MoE</span>
+      <span class="badge">MLA + GQA</span>
+    </div>
+  </div>
+
+  <div class="container">
+    <div class="section">
+      <h2>Architecture</h2>
+      <div class="arch-flow">
+        <div class="arch-box prelude">🎵 Prelude — standard transformer blocks (run once)</div>
+        <div class="arch-arrow">↓</div>
+        <div class="arch-box recurrent">🔁 Recurrent Block — one block looped T times<br><span class="arch-loop">h_{t+1} = A·h_t + B·e + Transformer(h_t, e)</span></div>
+        <div class="arch-arrow">↓</div>
+        <div class="arch-box coda">🎵 Coda — standard transformer blocks (run once)</div>
+        <div class="arch-arrow">↓</div>
+        <div style="color: var(--muted); font-size: 0.9rem;">Output logits</div>
+      </div>
+    </div>
+
+    <div class="section">
+      <h2>Live Demo — Small Model Inference</h2>
+      <div class="demo-card">
+        <p style="color: var(--muted); margin-bottom: 16px;">
+          Runs a tiny model (dim=256, 8 experts, 4 loops) on CPU with both <code class="inline">mla</code> and <code class="inline">gqa</code> attention. Forward pass + 8-token generation.
+        </p>
+        <button class="run-btn" id="runBtn" onclick="runDemo()">Run Inference</button>
+        <div class="results" id="results">
+          <div class="loading" id="loading" style="display:none;">
+            <span class="spinner"></span> Running model on CPU...
+          </div>
+          <div id="resultContent" style="display:none;">
+            <div class="result-grid" id="resultGrid"></div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="section">
+      <h2>Model Variants</h2>
+      <table>
+        <thead>
+          <tr>
+            <th>Variant</th>
+            <th>dim</th>
+            <th>Experts</th>
+            <th>expert_dim</th>
+            <th>Loops</th>
+            <th>Context</th>
+            <th>Max output</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for v in variants %}
+          <tr>
+            <td><span class="variant-name" onclick="loadVariant('{{ v.name }}')">{{ v.name }}</span></td>
+            <td>{{ v.dim }}</td>
+            <td>{{ v.experts }}</td>
+            <td>{{ v.expert_dim }}</td>
+            <td>{{ v.loops }}</td>
+            <td>{{ v.context }}</td>
+            <td>{{ v.output }}</td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+      <div class="variant-detail" id="variantDetail"></div>
+    </div>
+  </div>
+
+  <div class="footer">
+    OpenMythos v0.5.0 — an independent, community-driven theoretical reconstruction.
+  </div>
+
+  <script>
+    async function runDemo() {
+      const btn = document.getElementById('runBtn');
+      const results = document.getElementById('results');
+      const loading = document.getElementById('loading');
+      const content = document.getElementById('resultContent');
+      const grid = document.getElementById('resultGrid');
+
+      btn.disabled = true;
+      results.classList.add('show');
+      loading.style.display = 'block';
+      content.style.display = 'none';
+
+      try {
+        const resp = await fetch('/api/run', { method: 'POST' });
+        const data = await resp.json();
+        loading.style.display = 'none';
+        content.style.display = 'block';
+
+        grid.innerHTML = '';
+        for (const [type, r] of Object.entries(data)) {
+          const col = document.createElement('div');
+          col.className = 'result-col';
+          col.innerHTML = `
+            <h3>${type.toUpperCase()} Attention</h3>
+            <div class="stat-row"><span class="stat-label">Parameters</span><span class="stat-val">${r.params}</span></div>
+            <div class="stat-row"><span class="stat-label">Logits shape</span><span class="stat-val">[${r.logits_shape.join(', ')}]</span></div>
+            <div class="stat-row"><span class="stat-label">Generated shape</span><span class="stat-val">[${r.gen_shape.join(', ')}]</span></div>
+            <div class="stat-row"><span class="stat-label">Forward time</span><span class="stat-val">${r.fwd_ms} ms</span></div>
+            <div class="stat-row"><span class="stat-label">Generate time</span><span class="stat-val">${r.gen_ms} ms</span></div>
+            <div class="stat-row"><span class="stat-label">Spectral radius ρ(A)</span><span class="stat-val ok">${r.spectral_radius} ✓</span></div>
+          `;
+          grid.appendChild(col);
+        }
+      } catch (e) {
+        loading.style.display = 'none';
+        content.style.display = 'block';
+        grid.innerHTML = '<div style="color: #f85149;">Error: ' + e.message + '</div>';
+      }
+      btn.disabled = false;
+    }
+
+    async function loadVariant(name) {
+      const detail = document.getElementById('variantDetail');
+      detail.classList.add('show');
+      detail.innerHTML = '<span class="spinner"></span> Loading...';
+      try {
+        const resp = await fetch('/api/variant/' + name);
+        const d = await resp.json();
+        detail.innerHTML = `
+          <h3 style="color: var(--accent); margin-bottom: 12px;">${d.name}</h3>
+          <div class="stat-row"><span class="stat-label">Total parameters</span><span class="stat-val" style="color: var(--accent2);">${d.params}</span></div>
+          <div class="stat-row"><span class="stat-label">Hidden dim</span><span class="stat-val">${d.dim}</span></div>
+          <div class="stat-row"><span class="stat-label">Attention heads</span><span class="stat-val">${d.n_heads}</span></div>
+          <div class="stat-row"><span class="stat-label">Experts</span><span class="stat-val">${d.n_experts}</span></div>
+          <div class="stat-row"><span class="stat-label">Expert dim</span><span class="stat-val">${d.expert_dim}</span></div>
+          <div class="stat-row"><span class="stat-label">Max loop iters</span><span class="stat-val">${d.max_loop_iters}</span></div>
+          <div class="stat-row"><span class="stat-label">Max seq len</span><span class="stat-val">${d.max_seq_len.toLocaleString()}</span></div>
+          <div class="stat-row"><span class="stat-label">Attention type</span><span class="stat-val">${d.attn_type.toUpperCase()}</span></div>
+        `;
+      } catch (e) {
+        detail.innerHTML = 'Error: ' + e.message;
+      }
+    }
+  </script>
+</body>
+</html>
